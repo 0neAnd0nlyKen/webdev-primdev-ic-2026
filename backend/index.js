@@ -9,6 +9,13 @@ const port = 3000
 app.use(express.json())
 app.use(router)
 
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
-})
+if (process.env.ENV !== 'production') {
+  const port = process.env.PORT || 3000
+
+  app.listen(port, () => {
+    logger.info(`Library API is running at http://localhost:${port}`)
+    logger.info('Application started successfully')
+  })
+}
+
+export default app
