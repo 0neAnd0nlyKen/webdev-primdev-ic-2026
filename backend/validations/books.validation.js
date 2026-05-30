@@ -22,6 +22,25 @@ export const bookValidation = [
     .isNumeric()
     .withMessage('Category ID must be a number')
     .toInt(),
+  body('cover').custom((value, { req }) => {
+    const cover = req.file
+
+    if (!cover) {
+      return true // No file uploaded, so skip validation
+    }
+
+    // Check file type
+    if (!['image/jpeg', 'image/png', 'image/jpg'].includes(cover.mimetype)) {
+      throw new Error('Cover must be a PNG or JPEG image')
+    }
+
+    // Check file size (max 1MB)
+    if (cover.size >= 1 * 1024 * 1024) {
+      throw new Error('Cover must be less than 1MB')
+    }
+
+    return true
+  }),
 ]
 
 export const updateBookValidation = [
@@ -49,4 +68,23 @@ export const updateBookValidation = [
     .isNumeric()
     .withMessage('Category ID must be a number')
     .toInt(),
+  body('cover').custom((value, { req }) => {
+    const cover = req.file
+
+    if (!cover) {
+      return true // No file uploaded, so skip validation
+    }
+
+    // Check file type
+    if (!['image/jpeg', 'image/png', 'image/jpg'].includes(cover.mimetype)) {
+      throw new Error('Cover must be a PNG or JPEG image')
+    }
+
+    // Check file size (max 1MB)
+    if (cover.size >= 1 * 1024 * 1024) {
+      throw new Error('Cover must be less than 1MB')
+    }
+
+    return true
+  }),
 ]

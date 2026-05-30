@@ -22,6 +22,7 @@ router.get('/', getUsers)
 router.get('/:id', getUserById)
 router.get('/:id/profile', getUserByIdWithProfile) // buat route-nya
 router.post('/', userValidation, createUser)
+// router.post('/', createUser)
 router.put('/:id', updateUserValidation, updateUser)
 router.delete('/:id', deleteUser)
 

@@ -1,18 +1,21 @@
 // categories.controller.js
 
 import prisma from '../configs/database.config.js'
-
-import { validationResult } from 'express-validator';
+import logger from '../configs/logger.config.js'
+import { validationResult } from 'express-validator'
 
 export const getAllCategories = async (req, res) => {
   try {
+    logger.debug('getAllCategories: Started')
     const categories = await prisma.categories.findMany({
       include: {
-        books: true
-      }
+        books: true,
+      },
     })
+    logger.info({ count: categories.length }, 'Retrieved categories from database')
     res.json(categories)
   } catch (error) {
+    logger.error({ error: error.message }, 'Failed to retrieve categories')
     res.status(500).json({ error: error.message })
   }
 }
@@ -20,22 +23,26 @@ export const getAllCategories = async (req, res) => {
 export const getCategoryById = async (req, res) => {
   try {
     const id = parseInt(req.params.id)
+    logger.debug({ categoryId: id }, 'getCategoryById: Started')
 
     const category = await prisma.categories.findUnique({
       where: {
-        id: id
+        id: id,
       },
       include: {
-        books: true
-      }
+        books: true,
+      },
     })
 
     if (!category) {
+      logger.warn({ categoryId: id }, 'Category not found')
       return res.status(404).json({ error: `Category with ID: ${id} not found` })
     }
 
+    logger.info({ categoryId: id }, 'Category retrieved successfully')
     res.json(category)
   } catch (error) {
+    logger.error({ error: error.message }, 'Failed to retrieve category')
     res.status(500).json({ error: error.message })
   }
 }
@@ -52,39 +59,48 @@ export const isCategoryExist = async (id) => {
 }
 
 export const getAllBooksByCategoryId = async (req, res) => {
-  // Mendapatkan ID kategori yang akan diupdate dari parameter URL
-  // Lalu mengubahnya menjadi tipe data integer menggunakan parseInt
+  try {
     const id = parseInt(req.params.id)
+    logger.debug({ categoryId: id }, 'getAllBooksByCategoryId: Started')
 
-  // Mengambil kategori dengan ID yang sesuai dari database menggunakan Prisma Client
     const category = await prisma.categories.findUnique({
-        where: {
-            id: id,
-        },
-            include: {
-            books: true,
-        },
+      where: {
+        id: id,
+      },
+      include: {
+        books: true,
+      },
     })
 
-  // Jika kategori tidak ditemukan, kirimkan pesan error
     if (!category) {
-        return res.json({
+      logger.warn({ categoryId: id }, 'Category not found')
+      return res.status(404).json({
         success: false,
         message: `Category with ID: ${id} not found`,
-        })
+      })
     }
 
+    logger.info({ categoryId: id, bookCount: category.books.length }, 'Category retrieved successfully')
     res.json({
-        success: true,
-        message: 'Category retrieved successfully',
-        data: category,
+      success: true,
+      message: 'Category retrieved successfully',
+      data: category,
     })
+  } catch (error) {
+    logger.error({ error: error.message }, 'Failed to retrieve category books')
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while retrieving category books',
+      error: error.message,
+    })
+  }
 }
 
 export const createCategory = async (req, res) => {
   const validationErrors = validationResult(req)
 
   if (!validationErrors.isEmpty()) {
+    logger.warn({ errors: validationErrors.array() }, 'Validation failed')
     return res.status(400).json({
       success: false,
       message: 'Validation error',
@@ -96,20 +112,23 @@ export const createCategory = async (req, res) => {
     const { name } = req.body
 
     if (!name) {
+      logger.warn('Category name is required')
       return res.status(400).json({ error: 'Category name is required' })
     }
 
     const category = await prisma.categories.create({
       data: {
-        name
+        name,
       },
       include: {
-        books: true
-      }
+        books: true,
+      },
     })
 
+    logger.info({ categoryId: category.id }, 'Category created successfully')
     res.status(201).json({ message: 'Category created successfully', category })
   } catch (error) {
+    logger.error({ error: error.message }, 'Failed to create category')
     res.status(500).json({ error: error.message })
   }
 }
@@ -118,6 +137,7 @@ export const updateCategory = async (req, res) => {
   const validationErrors = validationResult(req)
 
   if (!validationErrors.isEmpty()) {
+    logger.warn({ errors: validationErrors.array() }, 'Validation failed')
     return res.status(400).json({
       success: false,
       message: 'Validation error',
@@ -130,26 +150,30 @@ export const updateCategory = async (req, res) => {
     const { name } = req.body
 
     if (!name) {
+      logger.warn({ categoryId: id }, 'Category name is required')
       return res.status(400).json({ error: 'Category name is required' })
     }
 
     const category = await prisma.categories.update({
       where: {
-        id: id
+        id: id,
       },
       data: {
-        name
+        name,
       },
       include: {
-        books: true
-      }
+        books: true,
+      },
     })
 
+    logger.info({ categoryId: id }, 'Category updated successfully')
     res.json({ message: 'Category updated successfully', category })
   } catch (error) {
     if (error.code === 'P2025') {
-      return res.status(404).json({ error: `Category with ID: ${id} not found` })
+      logger.warn({ categoryId: req.params.id }, 'Category not found')
+      return res.status(404).json({ error: `Category with ID: ${req.params.id} not found` })
     }
+    logger.error({ error: error.message }, 'Failed to update category')
     res.status(500).json({ error: error.message })
   }
 }
@@ -157,18 +181,22 @@ export const updateCategory = async (req, res) => {
 export const deleteCategory = async (req, res) => {
   try {
     const id = parseInt(req.params.id)
+    logger.debug({ categoryId: id }, 'deleteCategory: Started')
 
     await prisma.categories.delete({
       where: {
-        id: id
-      }
+        id: id,
+      },
     })
 
+    logger.info({ categoryId: id }, 'Category deleted successfully')
     res.json({ message: 'Category deleted successfully' })
   } catch (error) {
     if (error.code === 'P2025') {
-      return res.status(404).json({ error: `Category with ID: ${id} not found` })
+      logger.warn({ categoryId: req.params.id }, 'Category not found')
+      return res.status(404).json({ error: `Category with ID: ${req.params.id} not found` })
     }
+    logger.error({ error: error.message }, 'Failed to delete category')
     res.status(500).json({ error: error.message })
   }
 }
