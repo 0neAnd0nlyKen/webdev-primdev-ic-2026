@@ -8,6 +8,8 @@ getUserByIdWithProfile,
 createUser,
 updateUser,
 deleteUser
+ ,
+ getRecommendations
 } from '../controllers/users.controller.js'
 
 import {
@@ -21,6 +23,7 @@ const router = express.Router()
 router.get('/', getUsers)
 router.get('/:id', getUserById)
 router.get('/:id/profile', getUserByIdWithProfile) // buat route-nya
+router.get('/:id/recommendations', getRecommendations)
 router.post('/', userValidation, createUser)
 // router.post('/', createUser)
 router.put('/:id', updateUserValidation, updateUser)

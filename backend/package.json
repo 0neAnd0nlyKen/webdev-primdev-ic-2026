@@ -18,7 +18,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "prisma generate",
     "postinstall": "prisma generate",
-    "vercel-build": "prisma generate"
+    "vercel-build": "prisma generate",
+    "seed:recommend": "node backend/prisma/seed_for_recommend.js"
   },
   "devDependencies": {
     "dotenv": "^17.3.1",

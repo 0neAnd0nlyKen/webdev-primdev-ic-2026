@@ -1,0 +1,11 @@
+id,name,email,password,role,createdAt
+7,Admin User,admin@library.com,$2b$10$NA3/J7WVWm4Q8VIB8jlkweIWnioUWhCcJmclFQ7budsSO1T0Y4w/m,ADMIN,2026-04-18 03:35:04.01
+8,Sarah Librarian,sarah@library.com,$2b$10$dGXFSCuNNqbcqyrsRqnnHe2/xH/dqluqALf1FReOGfHUw8SyeQKVu,ADMIN,2026-04-18 03:35:04.122
+9,John Doe,john.doe@example.com,$2b$10$dGXFSCuNNqbcqyrsRqnnHe2/xH/dqluqALf1FReOGfHUw8SyeQKVu,USER,2026-04-18 03:35:04.229
+10,Jane Smith,jane.smith@example.com,$2b$10$dGXFSCuNNqbcqyrsRqnnHe2/xH/dqluqALf1FReOGfHUw8SyeQKVu,USER,2026-04-18 03:35:04.337
+11,Mike Johnson,mike.johnson@example.com,$2b$10$dGXFSCuNNqbcqyrsRqnnHe2/xH/dqluqALf1FReOGfHUw8SyeQKVu,USER,2026-04-18 03:35:04.445
+12,Emily Brown,emily.brown@example.com,$2b$10$dGXFSCuNNqbcqyrsRqnnHe2/xH/dqluqALf1FReOGfHUw8SyeQKVu,USER,2026-04-18 03:35:04.553
+13,David Wilson,david.wilson@example.com,$2b$10$dGXFSCuNNqbcqyrsRqnnHe2/xH/dqluqALf1FReOGfHUw8SyeQKVu,USER,2026-04-18 03:35:04.674
+14,Lisa Anderson,lisa.anderson@example.com,$2b$10$dGXFSCuNNqbcqyrsRqnnHe2/xH/dqluqALf1FReOGfHUw8SyeQKVu,USER,2026-04-18 03:35:04.787
+15,Yogi,yogs@example.com,$2b$10$6zF.UpYytiwvaMj93HVfieqLhzQ3bWlpn3MC2FvUzCb5VzHCtxOMq,USER,2026-05-02 03:29:37.986
+16,test7,test7@email.com,$2b$10$IcrS6.mVf63VwRZ/lruBletAnj9Qf85zQH5tuaZi7EjBiBF/imTj.,ADMIN,2026-05-30 01:23:34.331

@@ -205,3 +205,159 @@ export const getUserByIdWithProfile = async (req, res) => {
     })
   }
 }
+
+export const getRecommendations = async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id)
+    const limit = 3 // force top-3 recommendations
+    logger.debug({ userId, limit }, 'getRecommendations: Started (forced top-3)')
+
+    const startTs = Date.now()
+    const [borrowings, books] = await Promise.all([
+      prisma.borrowings.findMany({ select: { userId: true, bookId: true } }),
+      prisma.books.findMany({ select: { id: true, title: true, author: true, categoryId: true, cloudinaryId: true } }),
+    ])
+
+    logger.debug({ borrowingsCount: borrowings.length, booksCount: books.length }, 'Fetched borrowings and books')
+
+    const bookMap = new Map()
+    const bookCategory = new Map()
+    books.forEach((b) => {
+      bookMap.set(b.id, b)
+      bookCategory.set(b.id, b.categoryId)
+    })
+
+    logger.debug({ booksLoaded: bookMap.size }, 'Built book maps')
+
+    const userToBooks = new Map()
+    for (const row of borrowings) {
+      const uid = row.userId
+      const bid = row.bookId
+      if (!userToBooks.has(uid)) userToBooks.set(uid, new Set())
+      userToBooks.get(uid).add(bid)
+    }
+
+    logger.debug({ totalUsersSeen: userToBooks.size }, 'Mapped users to their borrowed books')
+
+    const targetSet = userToBooks.get(userId) || new Set()
+    logger.debug({ userBorrowCount: targetSet.size }, 'Target user borrow set')
+
+    if (targetSet.size === 0) {
+      logger.info({ userId }, 'No history for user, returning popular books fallback')
+      const popMap = new Map()
+      for (const { bookId } of borrowings) popMap.set(bookId, (popMap.get(bookId) || 0) + 1)
+      const popular = Array.from(popMap.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([bookId]) => bookMap.get(bookId))
+        .filter(Boolean)
+        .slice(0, limit)
+      logger.info({ userId, fallbackCount: popular.length, popularIds: popular.map(b => b.id) }, 'Popular fallback returned')
+      return res.json({ success: true, data: popular })
+    }
+
+    const collabScores = new Map()
+    const similarUsers = []
+    for (const [otherUser, otherSet] of userToBooks.entries()) {
+      if (otherUser === userId) continue
+      const intersectionSize = [...otherSet].filter((b) => targetSet.has(b)).length
+      if (intersectionSize === 0) continue
+      const unionSize = new Set([...otherSet, ...targetSet]).size
+      const jaccard = intersectionSize / unionSize
+      similarUsers.push({ userId: otherUser, jaccard, intersectionSize })
+      for (const b of otherSet) {
+        if (targetSet.has(b)) continue
+        collabScores.set(b, (collabScores.get(b) || 0) + jaccard)
+      }
+    }
+
+    similarUsers.sort((a, b) => b.jaccard - a.jaccard)
+    logger.debug({ similarUserCount: similarUsers.length, topSimilar: similarUsers.slice(0, 5) }, 'Similar users computed')
+    logger.debug({ collabCandidates: collabScores.size }, 'Collaborative candidates')
+
+    // Log top collaborative candidate scores
+    const topCollab = Array.from(collabScores.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([bookId, score]) => ({ bookId, score }))
+    logger.debug({ topCollab }, 'Top collaborative candidate scores')
+
+    const userCategoryCounts = new Map()
+    for (const b of targetSet) {
+      const cat = bookCategory.get(b)
+      if (cat == null) continue
+      userCategoryCounts.set(cat, (userCategoryCounts.get(cat) || 0) + 1)
+    }
+
+    // Log category vector for user
+    const categoryObj = Object.fromEntries(Array.from(userCategoryCounts.entries()))
+    logger.debug({ categoryObj }, 'User category counts')
+
+    const maxCatCount = Math.max(0, ...Array.from(userCategoryCounts.values()))
+    logger.debug({ categoryDims: userCategoryCounts.size, maxCatCount }, 'Content vector built')
+
+    const contentScores = new Map()
+    for (const b of books) {
+      if (targetSet.has(b.id)) continue
+      const cat = b.categoryId
+      const cnt = userCategoryCounts.get(cat) || 0
+      const score = maxCatCount > 0 ? cnt / maxCatCount : 0
+      if (score > 0) contentScores.set(b.id, score)
+    }
+
+    logger.debug({ contentCandidates: contentScores.size }, 'Content candidates')
+    const topContent = Array.from(contentScores.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([bookId, score]) => ({ bookId, score }))
+    logger.debug({ topContent }, 'Top content candidate scores')
+
+    const combined = new Map()
+    const alpha = 0.5
+    const beta = 0.5
+    const collabMax = Math.max(0, ...Array.from(collabScores.values()))
+    for (const [bookId, s] of collabScores.entries()) {
+      const norm = collabMax > 0 ? s / collabMax : 0
+      combined.set(bookId, { collab: norm, content: contentScores.get(bookId) || 0 })
+    }
+    for (const [bookId, s] of contentScores.entries()) {
+      if (!combined.has(bookId)) combined.set(bookId, { collab: 0, content: s })
+      else combined.get(bookId).content = s
+    }
+
+    logger.debug({ collabMax, combinedSize: combined.size }, 'Combined candidate map built')
+
+    const results = []
+    for (const [bookId, comps] of combined.entries()) {
+      const collabComp = comps.collab
+      const contentComp = comps.content
+      const finalScore = alpha * collabComp + beta * contentComp
+      const book = bookMap.get(bookId)
+      if (!book) continue
+      const reasons = []
+      if (collabComp > 0) reasons.push('Users similar to you borrowed this')
+      if (contentComp > 0) reasons.push(`Because you borrowed ${userCategoryCounts.get(book.categoryId) || 0} books in this category`)
+      results.push({
+        bookId: book.id,
+        title: book.title,
+        author: book.author,
+        categoryId: book.categoryId,
+        cloudinaryId: book.cloudinaryId,
+        score: finalScore,
+        components: { collab: collabComp, content: contentComp },
+        reason: reasons.join('; ') || 'Recommended',
+      })
+    }
+
+    logger.debug({ resultCandidates: results.length }, 'Built result candidates before sorting')
+
+    results.sort((a, b) => b.score - a.score)
+    const top = results.slice(0, limit)
+
+    const tookMs = Date.now() - startTs
+    logger.info({ userId, returned: top.length, topIds: top.map(t => t.bookId), tookMs }, 'Recommendations generated')
+    res.json({ success: true, data: top })
+  } catch (error) {
+    logger.error({ error: error.message, params: req.params }, 'Failed to generate recommendations')
+    res.status(500).json({ success: false, message: 'Failed to generate recommendations', error: error.message })
+  }
+}
