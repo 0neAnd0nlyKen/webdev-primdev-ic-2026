@@ -2,6 +2,8 @@
 
 import prisma from '../configs/database.config.js'
 
+import { validationResult } from 'express-validator';
+
 export const getAllCategories = async (req, res) => {
   try {
     const categories = await prisma.categories.findMany({
@@ -80,6 +82,16 @@ export const getAllBooksByCategoryId = async (req, res) => {
 }
 
 export const createCategory = async (req, res) => {
+  const validationErrors = validationResult(req)
+
+  if (!validationErrors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation error',
+      errors: validationErrors.array(),
+    })
+  }
+
   try {
     const { name } = req.body
 
@@ -103,6 +115,16 @@ export const createCategory = async (req, res) => {
 }
 
 export const updateCategory = async (req, res) => {
+  const validationErrors = validationResult(req)
+
+  if (!validationErrors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation error',
+      errors: validationErrors.array(),
+    })
+  }
+
   try {
     const id = parseInt(req.params.id)
     const { name } = req.body

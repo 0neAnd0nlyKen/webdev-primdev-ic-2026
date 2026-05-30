@@ -4,6 +4,12 @@ import usersRoute from './users.routes.js'
 import profilesRoute from './profiles.routes.js'
 import categoriesRoute from './categories.routes.js'
 import borrowingsRoute from './borrowings.routes.js'
+import authRoute from './auth.routes.js'
+import { authenticateToken } from '../middlewares/auth.middleware.js'
+
+import {
+  authorizeAdmin,
+} from '../middlewares/admin.middleware.js'
 
 const router = express.Router()
 
@@ -11,10 +17,12 @@ router.get('/', (req, res) => {
   res.send('Welcome to the API Library')
 })
 
-router.use('/books', booksRoute)
-router.use('/users', usersRoute)
-router.use('/profiles', profilesRoute)
-router.use('/categories', categoriesRoute)
-router.use('/borrowings', borrowingsRoute)
+router.use('/auth', authRoute)
+router.use('/books', authenticateToken, booksRoute)
+router.use('/users', authorizeAdmin, authenticateToken, usersRoute)
+router.use('/profiles', authorizeAdmin, authenticateToken, profilesRoute)
+router.use('/categories', authenticateToken, categoriesRoute)
+router.use('/borrowings', authorizeAdmin, authenticateToken, borrowingsRoute)
+
 
 export default router

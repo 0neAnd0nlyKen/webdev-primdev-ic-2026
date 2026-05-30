@@ -1,5 +1,7 @@
 import prisma from "../configs/database.config.js";
 
+import { validationResult } from 'express-validator';
+
 export const getUsers = async (req, res) => {
   try {
     const users = await prisma.users.findMany()
@@ -42,6 +44,16 @@ export const isUserExist = async (id) => {
 
 
 export const createUser = async (req, res) => {
+  const validationErrors = validationResult(req)
+
+  if (!validationErrors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation error',
+      errors: validationErrors.array(),
+    })
+  }
+
   try {
     const { name, email, password, role } = req.body
 
@@ -65,6 +77,16 @@ export const createUser = async (req, res) => {
 }
 
 export const updateUser = async (req, res) => {
+  const validationErrors = validationResult(req)
+
+  if (!validationErrors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation error',
+      errors: validationErrors.array(),
+    })
+  }
+
   try {
     const id = parseInt(req.params.id)
     const { name, email, password, role } = req.body

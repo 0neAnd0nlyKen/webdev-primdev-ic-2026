@@ -19,3 +19,5 @@ if (process.env.ENV !== 'production') {
 }
 
 export default app
+
+// npx plugins add vercel/vercel-plugin

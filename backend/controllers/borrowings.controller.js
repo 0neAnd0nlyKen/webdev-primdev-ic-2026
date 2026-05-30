@@ -2,6 +2,8 @@
 
 import prisma from '../configs/database.config.js'
 
+import { validationResult } from 'express-validator';
+
 export const getAllBorrowings = async (req, res) => {
   // Mengambil semua peminjaman dari database menggunakan Prisma Client
   const borrowings = await prisma.borrowings.findMany({
@@ -47,6 +49,17 @@ export const getBorrowingById = async (req, res) => {
 }
 
 export const createBorrowing = async (req, res) => {
+
+  const validationErrors = validationResult(req)
+
+  if (!validationErrors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation error',
+      errors: validationErrors.array(),
+    })
+  }
+
   // Mendapatkan data userId dan bookId dari body request
   const { userId, bookId } = req.body
 

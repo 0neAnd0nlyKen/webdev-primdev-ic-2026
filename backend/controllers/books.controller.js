@@ -2,6 +2,7 @@
 
 import prisma from '../configs/database.config.js' // jangan lupa import prisma
 import { isCategoryExist } from './categories.controller.js'
+import { validationResult } from 'express-validator';
 
 export const getBooks = async (req, res) => {
   // Mengambil semua buku dari database menggunakan Prisma Client
@@ -42,6 +43,17 @@ export const getBookById = async (req, res) => {
 }
 
 export const createBook = async (req, res) => {
+
+  const validationErrors = validationResult(req)
+
+  if (!validationErrors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation error',
+      errors: validationErrors.array(),
+    })
+  }
+
   // Mendapatkan data buku baru dari request body
   const { title, author, year, categoryId } = req.body
 
@@ -74,6 +86,17 @@ export const createBook = async (req, res) => {
 }
 
 export const updateBook = async (req, res) => {
+
+  const validationErrors = validationResult(req)
+
+  if (!validationErrors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      message: 'Validation error',
+      errors: validationErrors.array(),
+    })
+  }
+
   // Mendapatkan ID buku yang akan diupdate dari parameter URL
   // Lalu mengubahnya menjadi tipe data integer menggunakan parseInt
   const id = parseInt(req.params.id)
